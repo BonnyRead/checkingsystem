@@ -35,8 +35,12 @@ shinyUI(fluidPage(
       fileInput("file2","上傳銷售表格-限CSV格式"),
       hr(),
       sliderInput("conservativepara","保守係數",0.5,1,step = 0.1,value = 0.7),
-      actionButton("act","Run"),
-      downloadButton("downloadthis","Download"),
+      actionButton("act","評估進貨可能性"),
+      hr(),
+      actionButton("act2","推薦進貨"),
+      hr(),
+      downloadButton("downloadthis","進貨可能性表"),
+      downloadButton("downloadthis2","推薦進貨表"),
       conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                        tags$div("Processing...",id="loadmessage")
                        
@@ -46,8 +50,8 @@ shinyUI(fluidPage(
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel(type = "tabs",
-            tabPanel("contents",dataTableOutput("contents")),
-            tabPanel("recommendations",dataTableOutput("recommendations"))         
+            tabPanel("進貨表",dataTableOutput("contents")),
+            tabPanel("進貨推薦",dataTableOutput("recommendations"))         
                      )
           ) 
   )

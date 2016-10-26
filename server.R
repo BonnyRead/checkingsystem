@@ -11,7 +11,6 @@ library(stringr)
 library(plyr)
 library(dplyr)
 library(tidyr)
-library(randomForest)
 library(data.table)
 library(httr)
 library(xml2)
@@ -45,16 +44,17 @@ shinyServer(function(input, output) {
     colnames(tmpdata1)[colnames(tmpdata1)=="選項"] <- "spec"
     colnames(tmpdata1)[grep("庫存",colnames(tmpdata1))] <- "Remain"
     colnames(tmpdata1)[grep("商店貨號",colnames(tmpdata1))] <- "itemid"
+    colnames(tmpdata1)[grep("已確認",colnames(tmpdata1))] <- "Salespermitted"
     
   # 合併資料
     
     tmpdata2 %>% group_by(orderingdate,itemname,spec) %>% summarise(itemsales = sum(數量) ) -> Salesdata
     spread(Salesdata,key = "orderingdate",value  = "itemsales") -> Salesmerge
-    tmpdata1 %>% select(itemid,itemname,spec,Remain) -> Stockingmerge
+    tmpdata1 %>% select(itemid,itemname,spec,Remain,Salespermitted) -> Stockingmerge
     merge(Stockingmerge,Salesmerge,by=c("itemname","spec")) -> AlarmingBase
     apply( AlarmingBase,1,function(k) { k %>% .[-1:-4] %>% as.numeric } ) %>% t -> buyingmatrix
     buyingmatrix[is.na(buyingmatrix)] <- 0
-    AlarmingBase %>% select( 1 : 4 ) -> AlarmingBase
+    AlarmingBase %>% select( 1 : 5 ) -> AlarmingBase
     
     
     # 將產品做分類
@@ -112,7 +112,7 @@ shinyServer(function(input, output) {
     # 進行Bayesian Regularization for Feed-Forward Neural Networks模型訓練與預測
     
     makeRegrTask("bobochacha",ramdata,"target") -> issac
-    makeLearner("regr.brnn" ) -> lrn
+    makeLearner("regr.brnn",par.vals = list(neurons = 3) ) -> lrn
     train(lrn,issac) -> mod
     predictLearner(lrn,mod,predata) -> pooh
     pooh + (pooh * input$conservativepara) -> AlarmingBase$future14
@@ -133,16 +133,21 @@ shinyServer(function(input, output) {
     
     AlarmingBase %>% select (-color,-category) %>% filter( !Remain == 0 ) -> AlarmingBase
     data.frame(AlarmingBase)
-    
-    
      } )
+  
+    # 針對輸入的資料做進貨推薦
+  
+  datafile2 <- eventReactive(input$act2,{
+    data.frame(datafile)
+  })
  
+    # 輸出進貨表
   
   output$contents <- renderDataTable({
       datafile() 
-    
-  
   })
+  
+  # 製作輸出按鈕
   
   output$downloadthis <- downloadHandler(
     filename = function() {
@@ -154,7 +159,7 @@ shinyServer(function(input, output) {
   )
   
   output$recommendations <- renderDataTable({
-    data.frame(iris)
+    data.frame(datafile2)
   })
  
 
