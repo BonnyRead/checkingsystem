@@ -15,6 +15,7 @@ library(randomForest)
 library(data.table)
 library(httr)
 library(xml2)
+library(mlr)
 
 
 shinyServer(function(input, output) {
@@ -32,8 +33,8 @@ shinyServer(function(input, output) {
     
   # 排除預購字眼避免重複計算商品
     
-    str_replace_all(tmpdata1$商品名稱,"(\\[預購\\])|【預購】","") %>% trimws -> tmpdata1$商品名稱
-    str_replace_all(tmpdata2$商品名稱,"(\\[預購\\])|【預購】","") %>% trimws -> tmpdata2$商品名稱
+    str_replace_all(tmpdata1$商品名稱,"(\\[.*?\\])|\\【.*?\\】","") %>% trimws -> tmpdata1$商品名稱
+    str_replace_all(tmpdata2$商品名稱,"(\\[.*?\\])|\\【.*?\\】","") %>% trimws -> tmpdata2$商品名稱
     
   # 替換變數名稱以利後續的操作
     
@@ -108,18 +109,24 @@ shinyServer(function(input, output) {
       recent7 = apply(buyingmatrix,1,function(k) { k[ (length(k) - 6) : (length(k) ) ] %>% sum } )
     ) -> predata
     
-    # 進行隨機森林模型訓練
+    # 進行Bayesian Regularization for Feed-Forward Neural Networks模型訓練與預測
     
-    randomForest(target ~ ., data = ramdata , type = "regression" ) -> myway
-    predict(myway,newdata = predata) * input$conservativepara -> AlarmingBase$future14
+    makeRegrTask("bobochacha",ramdata,"target") -> issac
+    makeLearner("regr.brnn" ) -> lrn
+    train(lrn,issac) -> mod
+    predictLearner(lrn,mod,predata) -> pooh
+    pooh + (pooh * input$conservativepara) -> AlarmingBase$future14
+    AlarmingBase[AlarmingBase$future14 < 0,"future14"] <- 0
     ifelse(AlarmingBase$Remain < AlarmingBase$future14, "Run out" , "Stayed") -> AlarmingBase$Replenishment
+    
+    
     
     # 排除官網上沒有的品項
     
-    paste0("http://www.bonnyread.com.tw/products?page=",1:100) -> klist
+    paste0("http://www.bonnyread.com.tw/products?page=",1:90) -> klist
     sapply(klist,function(k) { k %>% GET %>% content(encoding = "UTF-8") %>%
         xml_find_all("//div[@class='title text-primary-color']") %>% xml_text(trim = TRUE)}) %>% unlist -> namelist
-    str_replace_all(namelist,"(\\[預購\\])|【預購】","") -> namelist
+    str_replace_all(namelist,"(\\[.*?\\])|\\【.*?\\】","") -> namelist
     AlarmingBase[AlarmingBase$itemname %in% namelist,] -> AlarmingBase
     
     # 輸出報表
@@ -137,14 +144,18 @@ shinyServer(function(input, output) {
   
   })
   
-  output$downloadfile <- downloadHandler(
-    filename = function() { 
-      paste('replenishment', 'csv', sep='.') 
+  output$downloadthis <- downloadHandler(
+    filename = function() {
+      paste('replenishment','csv',sep = ".")
     },
     content = function(file) {
-      write.csv(datafile(), file)
+      write.csv(datafile(),file,row.names = FALSE)
     }
   )
+  
+  output$recommendations <- renderDataTable({
+    data.frame(iris)
+  })
  
 
 }) 

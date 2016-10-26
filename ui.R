@@ -36,8 +36,7 @@ shinyUI(fluidPage(
       hr(),
       sliderInput("conservativepara","保守係數",0.5,1,step = 0.1,value = 0.7),
       actionButton("act","Run"),
-      hr(),
-      downloadButton("donwloadfile","Download"),
+      downloadButton("downloadthis","Download"),
       conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                        tags$div("Processing...",id="loadmessage")
                        
@@ -46,7 +45,10 @@ shinyUI(fluidPage(
 
     # Show a plot of the generated distribution
     mainPanel(
-            dataTableOutput("contents")
-          )
+      tabsetPanel(type = "tabs",
+            tabPanel("contents",dataTableOutput("contents")),
+            tabPanel("recommendations",dataTableOutput("recommendations"))         
+                     )
+          ) 
   )
 ))
