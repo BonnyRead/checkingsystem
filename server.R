@@ -134,12 +134,6 @@ shinyServer(function(input, output) {
     AlarmingBase %>% select (-color,-category) %>% filter( !Remain == 0 ) -> AlarmingBase
     data.frame(AlarmingBase)
      } )
-  
-    # 針對輸入的資料做進貨推薦
-  
-  datafile2 <- eventReactive(input$act2,{
-    data.frame(datafile)
-  })
  
     # 輸出進貨表
   
